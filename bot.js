@@ -49,19 +49,21 @@ const startEmbed = (title, desc) =>
   baseEmbed(title, desc, 0xe74c3c);
 
 /* =====================================
-   SLASH COMMANDS
+   SLASH COMMANDS (FIXED)
 ===================================== */
 
 const commands = [
   new SlashCommandBuilder()
     .setName("event")
-    .setDescription("Admin controls for events")
+    .setDescription("Admin controls for Legend of YMIR events")
     .addSubcommand(sub =>
       sub
         .setName("toggle")
         .setDescription("Enable or disable an event")
         .addStringOption(opt =>
-          opt.setName("event")
+          opt
+            .setName("event")
+            .setDescription("Which event to toggle")
             .setRequired(true)
             .addChoices(
               { name: "Loki (World Boss)", value: "loki" },
@@ -70,7 +72,9 @@ const commands = [
             )
         )
         .addStringOption(opt =>
-          opt.setName("state")
+          opt
+            .setName("state")
+            .setDescription("Turn the event ON or OFF")
             .setRequired(true)
             .addChoices(
               { name: "ON", value: "on" },
@@ -79,9 +83,11 @@ const commands = [
         )
     )
     .addSubcommand(sub =>
-      sub.setName("status").setDescription("View event status")
+      sub
+        .setName("status")
+        .setDescription("View current event status")
     )
-].map(c => c.toJSON());
+].map(cmd => cmd.toJSON());
 
 async function registerCommands() {
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
@@ -138,6 +144,8 @@ function nowUTC8() {
 
 /* =====================================
    PHANTOM OF LOKI
+   Tue / Thu / Sat
+   12:00 & 22:00
 ===================================== */
 
 const LOKI_DAYS = [2, 4, 6]; // Tue Thu Sat
@@ -146,37 +154,42 @@ async function checkLoki() {
   if (!EVENT_TOGGLES.loki) return;
 
   const now = nowUTC8();
-  const d = now.getDay();
-  const h = now.getHours();
-  const m = now.getMinutes();
+  const day = now.getDay();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
 
-  if (!LOKI_DAYS.includes(d)) return;
+  if (!LOKI_DAYS.includes(day)) return;
 
   const channel = await client.channels.fetch(CHANNEL_ID);
 
-  if ([11, 21].includes(h) && m === 50) {
+  if ([11, 21].includes(hour) && minute === 50) {
     channel.send({
       content: ROLE_PING,
-      embeds: [reminderEmbed(
-        "🧊 Phantom of Loki",
-        "⏰ **10 MINUTES LEFT**\nPrepare for the world boss!"
-      )]
+      embeds: [
+        reminderEmbed(
+          "🧊 Phantom of Loki",
+          "⏰ **10 MINUTES LEFT**\nPrepare your team and supplies!"
+        )
+      ]
     });
   }
 
-  if ([12, 22].includes(h) && m === 0) {
+  if ([12, 22].includes(hour) && minute === 0) {
     channel.send({
       content: ROLE_PING,
-      embeds: [startEmbed(
-        "🔥 PHANTOM OF LOKI HAS SPAWNED!",
-        "⚔️ Teleport via boss icon.\n🎁 Hit at least once for rewards!"
-      )]
+      embeds: [
+        startEmbed(
+          "🔥 PHANTOM OF LOKI HAS SPAWNED!",
+          "⚔️ Click the boss icon to teleport.\n🎁 Hit at least once for rewards!"
+        )
+      ]
     });
   }
 }
 
 /* =====================================
-   YMIR CUP (FRIDAY)
+   YMIR CUP
+   Friday 20:00
 ===================================== */
 
 async function checkYmirCup() {
@@ -185,33 +198,39 @@ async function checkYmirCup() {
   const now = nowUTC8();
   if (now.getDay() !== 5) return;
 
-  const h = now.getHours();
-  const m = now.getMinutes();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
   const channel = await client.channels.fetch(CHANNEL_ID);
 
-  if (h === 19 && m === 50) {
+  if (hour === 19 && minute === 50) {
     channel.send({
       content: ROLE_PING,
-      embeds: [reminderEmbed(
-        "🏆 YMIR Cup",
-        "⏰ **10 MINUTES LEFT**\nTop clans prepare for battle!"
-      )]
+      embeds: [
+        reminderEmbed(
+          "🏆 YMIR Cup",
+          "⏰ **10 MINUTES LEFT**\nTop clans prepare for battle!"
+        )
+      ]
     });
   }
 
-  if (h === 20 && m === 0) {
+  if (hour === 20 && minute === 0) {
     channel.send({
       content: ROLE_PING,
-      embeds: [startEmbed(
-        "🏆 YMIR CUP HAS STARTED!",
-        "🔥 Inter-server battle begins now!"
-      )]
+      embeds: [
+        startEmbed(
+          "🏆 YMIR CUP HAS STARTED!",
+          "🔥 Inter-server battle begins now!"
+        )
+      ]
     });
   }
 }
 
 /* =====================================
-   GROWTH HOT TIME (CORRECT LOGIC)
+   GROWTH HOT TIME
+   Weekday vs Weekend
+   20:00–24:00
 ===================================== */
 
 async function checkGrowthHotTime() {
@@ -219,42 +238,42 @@ async function checkGrowthHotTime() {
 
   const now = nowUTC8();
   const day = now.getDay();
-  const h = now.getHours();
-  const m = now.getMinutes();
+  const hour = now.getHours();
+  const minute = now.getMinutes();
 
   const isWeekend = day === 0 || day === 6;
   const channel = await client.channels.fetch(CHANNEL_ID);
 
-  if (h === 19 && m === 50) {
+  if (hour === 19 && minute === 50) {
     channel.send({
       content: ROLE_PING,
-      embeds: [reminderEmbed(
-        "📈 Growth Hot Time Incoming",
-        isWeekend
-          ? `🔥 **WEEKEND BUFFS**
+      embeds: [
+        reminderEmbed(
+          "📈 Growth Hot Time Incoming",
+          isWeekend
+            ? `🔥 **WEEKEND BUFFS**
 • Glasir Forest: EXP +40%
 • Hermod's Crossroads: EXP +40%
 • Crossroads of Ragnarok: EXP +20% / PvP DEF +50%
 • Hall of Valkyrie (Inter)`
-          : `⚔️ **WEEKDAY BUFFS**
+            : `⚔️ **WEEKDAY BUFFS**
 • Hunting EXP +20%
 • Crossroads of Ragnarok: PvP DEF +50%
 • Hall of Valkyrie (Normal)`
-      )]
+        )
+      ]
     });
   }
 
-  if (h === 20 && m === 0) {
+  if (hour === 20 && minute === 0) {
     channel.send({
       content: ROLE_PING,
-      embeds: [startEmbed(
-        "📈 GROWTH HOT TIME STARTED!",
-        isWeekend
-          ? `🔥 **WEEKEND EVENT ACTIVE**
-EXP bonuses boosted until **24:00**`
-          : `🔥 **WEEKDAY EVENT ACTIVE**
-EXP bonuses active until **24:00**`
-      )]
+      embeds: [
+        startEmbed(
+          "📈 GROWTH HOT TIME HAS STARTED!",
+          "🔥 EXP & bonuses active until **24:00**"
+        )
+      ]
     });
   }
 }
