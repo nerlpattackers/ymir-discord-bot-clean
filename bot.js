@@ -21,42 +21,32 @@ const CHANNEL_ID = process.env.CHANNEL_ID;
 const ROLE_PING = `<@&${process.env.ROLE_ID}>`;
 
 /* =====================================
-   RUNTIME EVENT TOGGLES
+   EVENT TOGGLES
 ===================================== */
 
 let EVENT_TOGGLES = {
   loki: true,
-  serverbattle: true,
-  ymircup: true
+  ymircup: true,
+  growthhot: true
 };
 
 /* =====================================
-   EMBED HELPERS
+   EMBEDS
 ===================================== */
 
-const infoEmbed = (title, desc, color = 0x5865f2) =>
+const baseEmbed = (title, desc, color) =>
   new EmbedBuilder()
     .setTitle(title)
     .setDescription(desc)
     .setColor(color)
-    .setFooter({ text: "Legend of YMIR • Event Control" })
-    .setTimestamp();
-
-const reminderEmbed = (title, desc) =>
-  new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(desc)
-    .setColor(0x3498db)
     .setFooter({ text: "Legend of YMIR • Server Time (UTC+8)" })
     .setTimestamp();
 
+const reminderEmbed = (title, desc) =>
+  baseEmbed(title, desc, 0x3498db);
+
 const startEmbed = (title, desc) =>
-  new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(desc)
-    .setColor(0xe74c3c)
-    .setFooter({ text: "Legend of YMIR • Fight with honor" })
-    .setTimestamp();
+  baseEmbed(title, desc, 0xe74c3c);
 
 /* =====================================
    SLASH COMMANDS
@@ -65,26 +55,22 @@ const startEmbed = (title, desc) =>
 const commands = [
   new SlashCommandBuilder()
     .setName("event")
-    .setDescription("Admin controls for game events")
+    .setDescription("Admin controls for events")
     .addSubcommand(sub =>
       sub
         .setName("toggle")
         .setDescription("Enable or disable an event")
         .addStringOption(opt =>
-          opt
-            .setName("event")
-            .setDescription("Event name")
+          opt.setName("event")
             .setRequired(true)
             .addChoices(
               { name: "Loki (World Boss)", value: "loki" },
-              { name: "Server Battle", value: "serverbattle" },
-              { name: "YMIR Cup", value: "ymircup" }
+              { name: "YMIR Cup", value: "ymircup" },
+              { name: "Growth Hot Time", value: "growthhot" }
             )
         )
         .addStringOption(opt =>
-          opt
-            .setName("state")
-            .setDescription("Turn event on or off")
+          opt.setName("state")
             .setRequired(true)
             .addChoices(
               { name: "ON", value: "on" },
@@ -93,11 +79,9 @@ const commands = [
         )
     )
     .addSubcommand(sub =>
-      sub
-        .setName("status")
-        .setDescription("View current event status")
+      sub.setName("status").setDescription("View event status")
     )
-].map(cmd => cmd.toJSON());
+].map(c => c.toJSON());
 
 async function registerCommands() {
   const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
@@ -109,72 +93,171 @@ async function registerCommands() {
 }
 
 /* =====================================
-   INTERACTION HANDLER
+   INTERACTIONS
 ===================================== */
 
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
-  // Admin only
-  if (
-    !interaction.member.permissions.has(
-      PermissionsBitField.Flags.Administrator
-    )
-  ) {
-    return interaction.reply({
-      content: "❌ You do not have permission to use this command.",
-      ephemeral: true
-    });
+  if (!interaction.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
+    return interaction.reply({ content: "❌ Admin only.", ephemeral: true });
   }
 
-  if (interaction.commandName === "event") {
-    const sub = interaction.options.getSubcommand();
+  const sub = interaction.options.getSubcommand();
 
-    /* -------- TOGGLE -------- */
-    if (sub === "toggle") {
-      const event = interaction.options.getString("event");
-      const state = interaction.options.getString("state");
+  if (sub === "toggle") {
+    const event = interaction.options.getString("event");
+    const state = interaction.options.getString("state");
+    EVENT_TOGGLES[event] = state === "on";
+    return interaction.reply(`✅ **${event}** is now **${state.toUpperCase()}**`);
+  }
 
-      EVENT_TOGGLES[event] = state === "on";
-
-      return interaction.reply({
-        embeds: [
-          infoEmbed(
-            "🎛️ Event Updated",
-            `**${event.toUpperCase()}** is now **${state.toUpperCase()}**`,
-            state === "on" ? 0x2ecc71 : 0xe74c3c
-          )
-        ]
-      });
-    }
-
-    /* -------- STATUS -------- */
-    if (sub === "status") {
-      const statusText = `
-🧊 **Phantom of Loki:** ${EVENT_TOGGLES.loki ? "🟢 ENABLED" : "🔴 DISABLED"}
-🏰 **Server Battle:** ${EVENT_TOGGLES.serverbattle ? "🟢 ENABLED" : "🔴 DISABLED"}
-🏆 **YMIR Cup:** ${EVENT_TOGGLES.ymircup ? "🟢 ENABLED" : "🔴 DISABLED"}
-      `;
-
-      return interaction.reply({
-        embeds: [
-          infoEmbed(
-            "📊 Event Status",
-            statusText.trim()
-          )
-        ]
-      });
-    }
+  if (sub === "status") {
+    return interaction.reply({
+      embeds: [
+        reminderEmbed(
+          "📊 Event Status",
+          `
+🧊 Phantom of Loki: ${EVENT_TOGGLES.loki ? "🟢 ENABLED" : "🔴 DISABLED"}
+🏆 YMIR Cup: ${EVENT_TOGGLES.ymircup ? "🟢 ENABLED" : "🔴 DISABLED"}
+📈 Growth Hot Time: ${EVENT_TOGGLES.growthhot ? "🟢 ENABLED" : "🔴 DISABLED"}
+          `.trim()
+        )
+      ]
+    });
   }
 });
 
 /* =====================================
-   (EVENT LOGIC REMAINS UNCHANGED)
-   Loki / Server Battle / YMIR Cup
+   TIME (UTC+8)
 ===================================== */
 
-// 👉 Keep your existing checkLoki(), checkServerBattle(), checkYmirCup() here
-// 👉 They already respect EVENT_TOGGLES
+function nowUTC8() {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000);
+}
+
+/* =====================================
+   PHANTOM OF LOKI
+===================================== */
+
+const LOKI_DAYS = [2, 4, 6]; // Tue Thu Sat
+
+async function checkLoki() {
+  if (!EVENT_TOGGLES.loki) return;
+
+  const now = nowUTC8();
+  const d = now.getDay();
+  const h = now.getHours();
+  const m = now.getMinutes();
+
+  if (!LOKI_DAYS.includes(d)) return;
+
+  const channel = await client.channels.fetch(CHANNEL_ID);
+
+  if ([11, 21].includes(h) && m === 50) {
+    channel.send({
+      content: ROLE_PING,
+      embeds: [reminderEmbed(
+        "🧊 Phantom of Loki",
+        "⏰ **10 MINUTES LEFT**\nPrepare for the world boss!"
+      )]
+    });
+  }
+
+  if ([12, 22].includes(h) && m === 0) {
+    channel.send({
+      content: ROLE_PING,
+      embeds: [startEmbed(
+        "🔥 PHANTOM OF LOKI HAS SPAWNED!",
+        "⚔️ Teleport via boss icon.\n🎁 Hit at least once for rewards!"
+      )]
+    });
+  }
+}
+
+/* =====================================
+   YMIR CUP (FRIDAY)
+===================================== */
+
+async function checkYmirCup() {
+  if (!EVENT_TOGGLES.ymircup) return;
+
+  const now = nowUTC8();
+  if (now.getDay() !== 5) return;
+
+  const h = now.getHours();
+  const m = now.getMinutes();
+  const channel = await client.channels.fetch(CHANNEL_ID);
+
+  if (h === 19 && m === 50) {
+    channel.send({
+      content: ROLE_PING,
+      embeds: [reminderEmbed(
+        "🏆 YMIR Cup",
+        "⏰ **10 MINUTES LEFT**\nTop clans prepare for battle!"
+      )]
+    });
+  }
+
+  if (h === 20 && m === 0) {
+    channel.send({
+      content: ROLE_PING,
+      embeds: [startEmbed(
+        "🏆 YMIR CUP HAS STARTED!",
+        "🔥 Inter-server battle begins now!"
+      )]
+    });
+  }
+}
+
+/* =====================================
+   GROWTH HOT TIME (CORRECT LOGIC)
+===================================== */
+
+async function checkGrowthHotTime() {
+  if (!EVENT_TOGGLES.growthhot) return;
+
+  const now = nowUTC8();
+  const day = now.getDay();
+  const h = now.getHours();
+  const m = now.getMinutes();
+
+  const isWeekend = day === 0 || day === 6;
+  const channel = await client.channels.fetch(CHANNEL_ID);
+
+  if (h === 19 && m === 50) {
+    channel.send({
+      content: ROLE_PING,
+      embeds: [reminderEmbed(
+        "📈 Growth Hot Time Incoming",
+        isWeekend
+          ? `🔥 **WEEKEND BUFFS**
+• Glasir Forest: EXP +40%
+• Hermod's Crossroads: EXP +40%
+• Crossroads of Ragnarok: EXP +20% / PvP DEF +50%
+• Hall of Valkyrie (Inter)`
+          : `⚔️ **WEEKDAY BUFFS**
+• Hunting EXP +20%
+• Crossroads of Ragnarok: PvP DEF +50%
+• Hall of Valkyrie (Normal)`
+      )]
+    });
+  }
+
+  if (h === 20 && m === 0) {
+    channel.send({
+      content: ROLE_PING,
+      embeds: [startEmbed(
+        "📈 GROWTH HOT TIME STARTED!",
+        isWeekend
+          ? `🔥 **WEEKEND EVENT ACTIVE**
+EXP bonuses boosted until **24:00**`
+          : `🔥 **WEEKDAY EVENT ACTIVE**
+EXP bonuses active until **24:00**`
+      )]
+    });
+  }
+}
 
 /* =====================================
    BOT START
@@ -184,10 +267,13 @@ client.once("ready", async () => {
   console.log(`🤖 Bot online as ${client.user.tag}`);
   await registerCommands();
 
+  const channel = await client.channels.fetch(CHANNEL_ID);
+  channel.send("✅ **Legend of YMIR Event Bot is ONLINE**");
+
   setInterval(() => {
-    // checkLoki();
-    // checkServerBattle();
-    // checkYmirCup();
+    checkLoki();
+    checkYmirCup();
+    checkGrowthHotTime();
   }, 60 * 1000);
 });
 
