@@ -180,7 +180,7 @@ async function checkLoki() {
       embeds: [
         startEmbed(
           "🔥 PHANTOM OF LOKI HAS SPAWNED!",
-          "⚔️ Click the boss icon to teleport.\n🎁 Hit at least once for rewards!"
+          "⚔️ Click the boss icon to teleport.\n🎁 Hit at least once for rewards! Pogi ni lead"
         )
       ]
     });
@@ -255,10 +255,10 @@ async function checkGrowthHotTime() {
 • Glasir Forest: EXP +40%
 • Hermod's Crossroads: EXP +40%
 • Crossroads of Ragnarok: EXP +20% / PvP DEF +50%
-• Hall of Valkyrie (Inter)`
+• Hall of Valkyrie (Inter) +20%`
             : `⚔️ **WEEKDAY BUFFS**
-• Hunting EXP +20%
-• Crossroads of Ragnarok: PvP DEF +50%
+Hunting EXP +20% For:
+• Crossroads of Ragnarok: + PvP DEF +50%
 • Hall of Valkyrie (Normal)`
         )
       ]
@@ -271,7 +271,7 @@ async function checkGrowthHotTime() {
       embeds: [
         startEmbed(
           "📈 GROWTH HOT TIME HAS STARTED!",
-          "🔥 EXP & bonuses active until **24:00**"
+          "🔥 EXP & bonuses active until **24:00** kaya party na kayong mga ina niyo thanks"
         )
       ]
     });
